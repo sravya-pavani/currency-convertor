@@ -1,5 +1,6 @@
 ﻿using System;
-
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 namespace ExchangeRateCalculator
@@ -12,83 +13,85 @@ namespace ExchangeRateCalculator
         static CalculateExchangeRate calc = new CalculateExchangeRate();
 
 
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
-            Console.Write("Supported Currencies: ");
-            System.Collections.Generic.List<string> currencyList = calc.GetSupportedCurrencies().ToArray().ToList();
-            currencyList.ForEach(currCode => Console.Write(currCode.ToString() + " "));
+            List<string> currencyList = calc.GetSupportedCurrencies().ToArray().ToList();
+
             if (!args.Any())
             {
-                // No arguments provided, hence prompting for currencies
-                ReadInput();
-                double secondCurrencyValue = calc.CalculateCurrency(firstCurrencyCode, secondCurrencyCode, firstCurrencyAmt);
-                Console.WriteLine(firstCurrencyAmt + firstCurrencyCode + " = " + secondCurrencyValue + secondCurrencyCode);
-            } else if (args.Count() == 2)
+                PrintUsage();
+                return 2;
+
+            } 
+            else if (args.Count() == 1)
             {
-                if (string.Equals(args[1], "backupToDb", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(args[0], "backupToDb", StringComparison.OrdinalIgnoreCase))
                 {
                     // TODO: Implement logic to backup the currency data to DB
                     Console.Write("Backed up current dcurrency rate to DB");
                 }
                 else
                 {
-                    PrintUsage(args[0]);
+                    PrintUsage();
+                    return 2;
                 }
 
-            } else if (args.Count() == 4)
+            } 
+            else if (args.Count() == 3 || args.Count() == 4)
             {
-                firstCurrencyCode = args[1].ToUpper();
-                secondCurrencyCode = args[2].ToUpper();
-                if (!currencyList.Contains(firstCurrencyCode) || 
-                    !currencyList.Contains(secondCurrencyCode) ||
-                    int.TryParse(args[3], out firstCurrencyAmt)) {
-                    double secondCurrencyValue = calc.CalculateCurrency(firstCurrencyCode, secondCurrencyCode, firstCurrencyAmt);
-                    Console.WriteLine("convertedValue = " + secondCurrencyValue);
+                firstCurrencyCode = args[0].ToUpper();
+                secondCurrencyCode = args[1].ToUpper();
+                double secondCurrencyValue;
+                if (currencyList.Contains(firstCurrencyCode) && 
+                    currencyList.Contains(secondCurrencyCode) &&
+                    int.TryParse(args[2], out firstCurrencyAmt)) {
+                    if (args.Count() == 4 && args[3] != null)
+                    {
+                        DateTime dt;
+                        try
+                        {
+                            dt = Convert.ToDateTime(args[3]);
+                        } catch (FormatException e)
+                        {
+                            Console.WriteLine("Invalid Date !!");
+                            return 1;
+                        }
+                        secondCurrencyValue = calc.CalculateCurrency(firstCurrencyCode, secondCurrencyCode, firstCurrencyAmt,
+                                dt.ToString("yyyy-MM-dd"));
+                    }
+                    else
+                    {
+                        secondCurrencyValue = calc.CalculateCurrency(firstCurrencyCode, secondCurrencyCode, firstCurrencyAmt);
+                    }
+                    Console.WriteLine(firstCurrencyAmt + " " + firstCurrencyCode + " = " + secondCurrencyValue + " " + secondCurrencyCode);
                 }
                 else
                 {
-                    PrintUsage(args[0]);
+                    Console.WriteLine("UnSupported Currency");
+                    PrintUsage();
+                    return 2;
                 }
             }
             else
             {
-                PrintUsage(args[0]);
+                PrintUsage();
+                return 2;
             }
-
+            return 0;
         }
 
-        private static void PrintUsage(string programName)
+        private static void PrintUsage()
         {
             Console.WriteLine("Invalid Input !!");
             Console.WriteLine("Usage:");
-            Console.WriteLine(programName + "<FROM_CURRENCYCODE> <TO_CURRENCYCODE> <AMOUNT>");
+            string programName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+            Console.WriteLine(programName + " <FROM_CURRENCYCODE> <TO_CURRENCYCODE> <AMOUNT> [<DATE>]");
             Console.WriteLine("OR");
-            Console.WriteLine(programName + "backupToDb");
-        }
-
-        /// <summary>
-        /// Reads the input from the user. Example: EUR
-        /// </summary>
-        public static void ReadInput()
-        {
-            Console.WriteLine();
-            Console.Write("Enter Currency Code to be converted FROM : ");
-            firstCurrencyCode = Console.ReadLine();
-            firstCurrencyCode = ValidateCurrencyCode(firstCurrencyCode).ToUpper();
-
-            Console.Write("Enter Currency Code to be converted TO : ");
-            secondCurrencyCode = Console.ReadLine();
-            secondCurrencyCode = ValidateCurrencyCode(secondCurrencyCode).ToUpper();
-            
-
-            Console.Write("Enter First Currency in amount: ");
-            var firstCurrencyAsString = Console.ReadLine();
-
-            while (!int.TryParse(firstCurrencyAsString, out firstCurrencyAmt))
-            {
-                Console.WriteLine("This is not a number! Input your First Currency in amount once more");
-                firstCurrencyAsString = Console.ReadLine();
-            }
+            Console.WriteLine(programName + " backupToDb");
+            Console.WriteLine("");
+            Console.Write("Supported Currencies: ");
+            List<string> currencyList = calc.GetSupportedCurrencies().ToArray().ToList();
+            currencyList.ForEach(currCode => Console.Write(currCode.ToString() + " "));
         }
 
         public static string ValidateCurrencyCode(string codeName)
