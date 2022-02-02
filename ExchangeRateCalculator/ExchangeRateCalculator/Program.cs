@@ -15,6 +15,8 @@ namespace ExchangeRateCalculator
 
         public static int Main(string[] args)
         {
+            // In the custructor a call is made to retrieve the excahnge rates
+            // This is needed to check dynamically the supported currencies
             List<string> currencyList = calc.GetSupportedCurrencies().ToArray().ToList();
 
             if (!args.Any())
@@ -25,10 +27,22 @@ namespace ExchangeRateCalculator
             } 
             else if (args.Count() == 1)
             {
+                // This program is expected to be called with "backupToDb" as
+                // argument every day to store the currency to SQL DB
                 if (string.Equals(args[0], "backupToDb", StringComparison.OrdinalIgnoreCase))
                 {
-                    // TODO: Implement logic to backup the currency data to DB
-                    Console.Write("Backed up current dcurrency rate to DB");
+                    Console.Write("Backed up current currency rate to DB");
+                    String dateNow = DateTime.Now.ToString("yyyy-MM-dd");
+                    if (calc.RetrieveExchangeRate(dateNow))
+                    {
+                        SqlHandler.AddDataToDB(dateNow, calc.GetRetrievedExchangeRates());
+                    }
+                    else
+                    {
+                        Console.WriteLine("Unable to get Excahnge Rates at the moment");
+                        return 3;
+                    }
+
                 }
                 else
                 {
@@ -37,6 +51,8 @@ namespace ExchangeRateCalculator
                 }
 
             } 
+            // Date is optional. If passed, exchange from that date is retrieved
+            //                   Else, the latest is retrieved
             else if (args.Count() == 3 || args.Count() == 4)
             {
                 firstCurrencyCode = args[0].ToUpper();
@@ -53,7 +69,7 @@ namespace ExchangeRateCalculator
                             dt = Convert.ToDateTime(args[3]);
                         } catch (FormatException e)
                         {
-                            Console.WriteLine("Invalid Date !!");
+                            Console.WriteLine("Invalid Date Exception!!" + e);
                             return 1;
                         }
                         secondCurrencyValue = calc.CalculateCurrency(firstCurrencyCode, secondCurrencyCode, firstCurrencyAmt,
@@ -62,6 +78,12 @@ namespace ExchangeRateCalculator
                     else
                     {
                         secondCurrencyValue = calc.CalculateCurrency(firstCurrencyCode, secondCurrencyCode, firstCurrencyAmt);
+                    }
+
+                    if (secondCurrencyValue < 0)
+                    {
+                        Console.WriteLine("Unable to get Excahnge Rates at the moment");
+                        return 3;
                     }
                     Console.WriteLine(firstCurrencyAmt + " " + firstCurrencyCode + " = " + secondCurrencyValue + " " + secondCurrencyCode);
                 }
@@ -92,33 +114,6 @@ namespace ExchangeRateCalculator
             Console.Write("Supported Currencies: ");
             List<string> currencyList = calc.GetSupportedCurrencies().ToArray().ToList();
             currencyList.ForEach(currCode => Console.Write(currCode.ToString() + " "));
-        }
-
-        public static string ValidateCurrencyCode(string codeName)
-        {
-            while (string.IsNullOrEmpty(codeName))
-            {
-                Console.WriteLine("Currency Code can't be empty! Input your Currency Code once more");
-                codeName = Console.ReadLine();
-            }
-            while (!CheckCodeNames(codeName))
-            {
-                Console.WriteLine("Input your Currency Code in these values: ");
-                calc.GetSupportedCurrencies().ToArray().ToList().ForEach(currCode => Console.Write(currCode.ToString() + " "));
-                Console.WriteLine("> ");
-                codeName = Console.ReadLine();
-            }
-            return codeName;
-        }
-
-        public static bool CheckCodeNames(string codeName)
-        {
-            bool isValid = false;
-            if (SiteGlobal.ValidCodes.Contains(codeName.ToUpper()))
-                isValid = true;
-            else
-                isValid = false;
-            return isValid;
         }
     }
 }
