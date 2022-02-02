@@ -39,10 +39,14 @@ namespace ExchangeRateCalculator
                 if (res != null)
                 {
                     JObject results = JObject.Parse(res);
+                    if (!bool.Parse(results["success"].ToString()))
+                    {
+                        return false;
+                    }
                     exchangeRates = JsonConvert.DeserializeObject<Dictionary<string, double>>(results[SiteGlobal.DataJson].ToString());
                     //Add Base Currency also to the dictionary
                     exchangeRates.Add(results[SiteGlobal.Base].ToString(), 1);
-                    return bool.Parse(results["success"].ToString());
+                    return true;
                 }
             }
             return false;
