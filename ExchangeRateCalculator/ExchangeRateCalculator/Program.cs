@@ -19,6 +19,12 @@ namespace ExchangeRateCalculator
             // This is needed to check dynamically the supported currencies
             List<string> currencyList = calc.GetSupportedCurrencies().ToArray().ToList();
 
+            if ((currencyList != null) && !currencyList.Any())
+            {
+                Console.WriteLine("Unable to get Excahnge Rates at the moment");
+                return 3;
+            }
+
             if (!args.Any())
             {
                 PrintUsage();
